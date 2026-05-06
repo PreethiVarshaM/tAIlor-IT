@@ -326,6 +326,70 @@ label {
   margin: 8px 0;
 }
 
+.readinessGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.readinessTile {
+  border: 1px solid #e1e8dc;
+  background: #f8faf5;
+  border-radius: 8px;
+  padding: 10px;
+  display: grid;
+  gap: 4px;
+}
+
+.readinessTile span {
+  color: #6d796d;
+  font-size: 0.74rem;
+}
+
+.readinessTile strong {
+  color: #1f4e43;
+  font-size: 0.88rem;
+}
+
+.roadmapBlock {
+  border-radius: 8px;
+  padding: 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.roadmapBlock.ready {
+  background: #eef7ef;
+  border: 1px solid #cfe3d1;
+}
+
+.roadmapBlock.next {
+  background: #f8f3e7;
+  border: 1px solid #e8d7b6;
+}
+
+.roadmapTitle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #1f4e43;
+}
+
+.roadmapBlock.next .roadmapTitle {
+  color: #7a4f08;
+}
+
+.roadmapBlock ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.roadmapBlock li {
+  margin: 7px 0;
+  color: #3f4f44;
+  font-size: 0.88rem;
+}
+
 .versionName {
   border: 1px dashed #aab7a7;
   background: #f7f9f4;

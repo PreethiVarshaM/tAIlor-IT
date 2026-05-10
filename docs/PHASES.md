@@ -10,6 +10,8 @@ Goal: Build a usable single-page resume tailoring workspace that proves the end-
 
 ### Works Now
 
+- Master-data fetch from `Resume_master_data` using `data/professional_master_data.yml` as source of truth.
+- Manual fallback flow when master data is unavailable or missing required resume fields.
 - Job target inputs for company, role, job URL, and job description.
 - Candidate data pool with editable name, title, summary, skills, projects, certifications, and existing resume text.
 - Public GitHub repository import by username through the GitHub REST API.
@@ -21,10 +23,13 @@ Goal: Build a usable single-page resume tailoring workspace that proves the end-
 - Version name generation with date, company, and role.
 - GitHub save action that stores resume text and metadata under `resumes/<version>/`.
 - In-app Phase 1 status panel showing what works now and what comes next.
+- JD match analysis based on loaded master data, selected projects, skills, and work bullets.
 
 ### Known Limits
 
 - The relevance engine is keyword-based, not LLM-based.
+- Master-data import currently expects `data/professional_master_data.yml` on the `main` branch.
+- Private master-data repos require a GitHub token entered in the frontend until backend token storage is added.
 - Existing resume and LinkedIn import extract only simple summary, skill, and certification signals.
 - DOCX and PDF exports currently use plain text rendering rather than the full visual template.
 - GitHub token is entered in the browser and should be moved to secure backend storage.

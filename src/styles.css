@@ -312,8 +312,36 @@ label {
   gap: 4px;
 }
 
-.metric span {
+.metric span,
+.analysisCard span,
+.sourceSummary span {
   color: #6d796d;
+  font-size: 0.8rem;
+}
+
+.sourceSummary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.sourceSummary > div,
+.analysisCard {
+  border: 1px solid #e1e8dc;
+  background: #f8faf5;
+  border-radius: 8px;
+  padding: 10px;
+  display: grid;
+  gap: 4px;
+}
+
+.sourceSummary strong,
+.analysisCard strong {
+  color: #1f4e43;
+}
+
+.analysisCard small {
+  color: #667466;
   font-size: 0.8rem;
 }
 

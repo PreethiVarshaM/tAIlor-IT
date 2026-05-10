@@ -6,6 +6,7 @@ import {
   BriefcaseBusiness,
   CheckCircle2,
   Clock3,
+  Database,
   Download,
   FileText,
   Github,
@@ -20,6 +21,7 @@ import { useMemo, useState } from "react";
 import { initialJob, initialPool, templates } from "./sampleData";
 import {
   createResumeDraft,
+  fetchMasterData,
   fetchGithubRepos,
   mergeGithubRepos,
   parseLinkedInProfileText,
@@ -65,6 +67,8 @@ export function App() {
   const [pool, setPool] = useState<DetailPool>(initialPool);
   const [job, setJob] = useState<JobTarget>(initialJob);
   const [templateId, setTemplateId] = useState(templates[0].id);
+  const [masterRepoUrl, setMasterRepoUrl] = useState("https://github.com/PreethiVarshaM/Resume_master_data.git");
+  const [masterLoaded, setMasterLoaded] = useState(false);
   const [githubUser, setGithubUser] = useState("octocat");
   const [linkedinUrl, setLinkedinUrl] = useState("");
   const [linkedinText, setLinkedinText] = useState("");
@@ -76,6 +80,35 @@ export function App() {
   const draft = useMemo(() => createResumeDraft(pool, job), [pool, job]);
   const resumeText = useMemo(() => resumeToText(pool, draft), [pool, draft]);
   const selectedTemplate = templates.find((template) => template.id === templateId)!;
+  const profileCompleteness = useMemo(() => {
+    const checks = [
+      Boolean(pool.name),
+      Boolean(pool.email),
+      Boolean(pool.summary),
+      pool.skills.length > 0,
+      pool.experience.length > 0,
+      pool.projects.length > 0,
+      pool.education.length > 0,
+    ];
+    return Math.round((checks.filter(Boolean).length / checks.length) * 100);
+  }, [pool]);
+
+  const loadMasterData = async () => {
+    try {
+      setStatus("Fetching resume master data from GitHub...");
+      const nextPool = await fetchMasterData(masterRepoUrl, githubToken);
+      setPool(nextPool);
+      setMasterLoaded(true);
+      const githubLink = masterRepoUrl.match(/github\.com\/([^/]+)\//i)?.[1] || "";
+      if (githubLink) {
+        setGithubUser(githubLink);
+      }
+      setStatus("Master data loaded. Paste a JD to refresh the relevance analysis.");
+    } catch (error) {
+      setMasterLoaded(false);
+      setStatus(error instanceof Error ? error.message : "Master data unavailable. Fill resume details manually.");
+    }
+  };
 
   const importGithub = async () => {
     try {
@@ -217,6 +250,30 @@ export function App() {
 
       <section className="workspace">
         <aside className="leftPane">
+          <Panel icon={<Database />} title="Master Data Source">
+            <label>
+              Resume master repo
+              <input value={masterRepoUrl} onChange={(event) => setMasterRepoUrl(event.target.value)} />
+            </label>
+            <label>
+              GitHub token for private data
+              <input value={githubToken} onChange={(event) => setGithubToken(event.target.value)} type="password" placeholder="Optional for private repo" />
+            </label>
+            <div className="sourceSummary">
+              <div>
+                <span>Source</span>
+                <strong>{masterLoaded ? "GitHub master data" : "Manual fallback"}</strong>
+              </div>
+              <div>
+                <span>Profile completeness</span>
+                <strong>{profileCompleteness}%</strong>
+              </div>
+            </div>
+            <button onClick={loadMasterData} title="Load resume master data">
+              <RefreshCw size={16} /> Load Master
+            </button>
+          </Panel>
+
           <Panel icon={<BriefcaseBusiness />} title="Target Job">
             <div className="fieldGrid two">
               <label>
@@ -348,6 +405,13 @@ export function App() {
               <span>Template</span>
               <strong>{selectedTemplate.name}</strong>
               <small>{selectedTemplate.description}</small>
+            </div>
+            <div className="analysisCard">
+              <span>JD Match Analysis</span>
+              <strong>{draft.score >= 75 ? "Strong match" : draft.score >= 45 ? "Partial match" : "Needs more evidence"}</strong>
+              <small>
+                Compared the target JD with the loaded resume pool, selected projects, skills, and work bullets.
+              </small>
             </div>
             <div className="chips">
               {draft.missingKeywords.map((keyword) => (

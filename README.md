@@ -8,6 +8,8 @@ Phase 1 MVP is implemented as a Vite + React + TypeScript web app.
 
 Working now:
 
+- Resume master-data loading from `https://github.com/PreethiVarshaM/Resume_master_data.git`.
+- Manual resume-detail fallback when master data is unavailable or incomplete.
 - Live job targeting from company, role, job URL, and pasted job description.
 - Reusable person data pool for summary, skills, projects, certifications, and old resume text.
 - Public GitHub repository import by username.
@@ -80,6 +82,8 @@ docs/
 ```
 
 ## Product Notes
+
+The app treats `data/professional_master_data.yml` in the configured master-data repository as the preferred source of truth. It can fetch public repositories directly, and private repositories through a GitHub token entered in the app. If the file cannot be fetched or is missing required fields, the user can continue by filling the in-app resume detail fields manually.
 
 Direct LinkedIn scraping is intentionally not implemented in Phase 1 because LinkedIn often blocks automated scraping and may require authorized access. The current app stores the LinkedIn URL and supports merging pasted or exported profile text. A later backend phase should add a compliant connector or export-upload workflow.
 

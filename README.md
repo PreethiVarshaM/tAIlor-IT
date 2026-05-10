@@ -92,6 +92,8 @@ docs/
 
 The app treats `data/professional_master_data.yml` in the configured master-data repository as the preferred source of truth. It can fetch public repositories directly, and private repositories through a GitHub token entered in the app. If the file cannot be fetched or is missing required fields, the user can continue by filling the in-app resume detail fields manually.
 
+Project phase status, technical roadmap details, and internal progress notes should stay in documentation files such as this README and [docs/PHASES.md](docs/PHASES.md). The application UI should show only user-relevant resume building, evidence review, JD analysis, and export controls.
+
 Direct LinkedIn scraping is intentionally not implemented in Phase 1 because LinkedIn often blocks automated scraping and may require authorized access. The current app stores the LinkedIn URL and supports merging pasted or exported profile text. A later backend phase should add a compliant connector or export-upload workflow.
 
 GitHub saving currently writes generated TXT resume content plus metadata. Future phases should generate DOCX/PDF from the chosen visual template and save the complete artifact bundle.

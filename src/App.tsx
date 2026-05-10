@@ -5,12 +5,12 @@ import {
   Award,
   BriefcaseBusiness,
   CheckCircle2,
-  Clock3,
   Database,
   Download,
   FileText,
   Github,
   Link,
+  AlertTriangle,
   Upload,
   Plus,
   RefreshCw,
@@ -38,36 +38,6 @@ const updateList = (value: string) =>
     .split(",")
     .map((item) => item.trim())
     .filter(Boolean);
-
-const phaseOneWorking = [
-  "Candidate evidence intake from PDF, DOCX, TXT, MD, and pasted text.",
-  "Strict local analysis agent that reports relevance, gaps, and fixes without adding facts.",
-  "Live job targeting from job URL, company, role, and pasted job description.",
-  "Reusable person data pool with summary, skills, projects, certifications, and old resume merge.",
-  "Public GitHub repository import for recent projects, languages, topics, and repo links.",
-  "LinkedIn profile URL capture with paste-based profile merge for authorized data use.",
-  "Resume relevance score, missing keyword chips, and improvement suggestions.",
-  "Focused Modern template with live preview and TXT, DOCX, and PDF export.",
-  "Versioned GitHub save path with resume text and metadata for later reference.",
-];
-
-const nextEnhancements = [
-  "Backend workspace with secure user auth, encrypted GitHub tokens, and stored profile pools.",
-  "LLM-based multi-agent reviewer with server-side secrets, citations, and structured audit logs.",
-  "Authorized LinkedIn import via export upload or approved profile-data connector.",
-  "Multiple extendable templates with visual preview, ATS mode, and recruiter mode.",
-  "Inline resume editor with accept/reject suggestions, section locking, and revision history.",
-  "PDF/DOCX generation from the selected template instead of plain text layout exports.",
-  "GitHub branch or pull request creation for every generated resume version.",
-];
-
-const phaseChecklist = [
-  { label: "Input sources", value: "Ready" },
-  { label: "Scoring", value: "Keyword MVP" },
-  { label: "Exports", value: "Ready" },
-  { label: "Templates", value: "1 active" },
-  { label: "Persistence", value: "GitHub save" },
-];
 
 export function App() {
   const [pool, setPool] = useState<DetailPool>(initialPool);
@@ -437,10 +407,10 @@ export function App() {
                 Confidence: {analysis.confidence}. Compared only against loaded or pasted candidate evidence.
               </small>
             </div>
-            <RoadmapList icon={<CheckCircle2 size={16} />} title="Matched Evidence" items={analysis.matchedKeywords.map((keyword) => `Evidence found for "${keyword}".`)} tone="ready" />
-            <RoadmapList icon={<Clock3 size={16} />} title="Blunt Mismatches" items={analysis.bluntMismatches} tone="next" />
-            <RoadmapList icon={<FileText size={16} />} title="Fix Before Applying" items={analysis.fixes} tone="plain" />
-            <RoadmapList icon={<CheckCircle2 size={16} />} title="ATS Checks" items={analysis.atsChecks} tone="ready" />
+            <AnalysisList icon={<CheckCircle2 size={16} />} title="Matched Evidence" items={analysis.matchedKeywords.map((keyword) => `Evidence found for "${keyword}".`)} tone="ready" />
+            <AnalysisList icon={<AlertTriangle size={16} />} title="Blunt Mismatches" items={analysis.bluntMismatches} tone="warning" />
+            <AnalysisList icon={<FileText size={16} />} title="Fix Before Applying" items={analysis.fixes} tone="plain" />
+            <AnalysisList icon={<CheckCircle2 size={16} />} title="ATS Checks" items={analysis.atsChecks} tone="ready" />
             <div className="chips">
               {draft.missingKeywords.map((keyword) => (
                 <span key={keyword}>{keyword}</span>
@@ -451,19 +421,6 @@ export function App() {
                 <li key={suggestion}>{suggestion}</li>
               ))}
             </ul>
-          </Panel>
-
-          <Panel icon={<CheckCircle2 />} title="Phase 1 Status">
-            <div className="readinessGrid">
-              {phaseChecklist.map((item) => (
-                <div className="readinessTile" key={item.label}>
-                  <span>{item.label}</span>
-                  <strong>{item.value}</strong>
-                </div>
-              ))}
-            </div>
-            <RoadmapList icon={<CheckCircle2 size={16} />} title="Works Now" items={phaseOneWorking} tone="ready" />
-            <RoadmapList icon={<Clock3 size={16} />} title="Next Enhancement" items={nextEnhancements} tone="next" />
           </Panel>
 
           <Panel icon={<Link />} title="LinkedIn Import">
@@ -523,7 +480,7 @@ function ResumeSection({ title, children }: { title: string; children: React.Rea
   );
 }
 
-function RoadmapList({
+function AnalysisList({
   icon,
   title,
   items,
@@ -532,11 +489,11 @@ function RoadmapList({
   icon: React.ReactNode;
   title: string;
   items: string[];
-  tone: "ready" | "next" | "plain";
+  tone: "ready" | "warning" | "plain";
 }) {
   return (
-    <div className={`roadmapBlock ${tone}`}>
-      <div className="roadmapTitle">
+    <div className={`analysisBlock ${tone}`}>
+      <div className="analysisTitle">
         {icon}
         <strong>{title}</strong>
       </div>

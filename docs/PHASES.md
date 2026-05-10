@@ -2,6 +2,8 @@
 
 This file is the living enhancement log for AI Resume Picker. Update it at the end of every phase so the product, implementation, and remaining work stay aligned.
 
+Documentation rule: keep phase status, project roadmap, technical notes, and internal progress tracking in documentation only. Do not expose phase labels or project-progress panels in the user-facing app.
+
 ## Phase 1: Interactive MVP
 
 Status: In progress
@@ -26,7 +28,6 @@ Goal: Build a usable single-page resume tailoring workspace that proves the end-
 - TXT, DOCX, and PDF export actions.
 - Version name generation with date, company, and role.
 - GitHub save action that stores resume text and metadata under `resumes/<version>/`.
-- In-app Phase 1 status panel showing what works now and what comes next.
 - JD match analysis based on loaded master data, selected projects, skills, and work bullets.
 
 ### Known Limits

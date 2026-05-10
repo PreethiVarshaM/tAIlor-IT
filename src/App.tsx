@@ -5,11 +5,9 @@ import {
   Award,
   BriefcaseBusiness,
   CheckCircle2,
-  Database,
   Download,
   FileText,
   Github,
-  Link,
   AlertTriangle,
   Upload,
   Plus,
@@ -39,9 +37,19 @@ const updateList = (value: string) =>
     .map((item) => item.trim())
     .filter(Boolean);
 
+type WorkspaceStep = "source" | "job" | "review" | "export";
+
+const workspaceSteps: Array<{ id: WorkspaceStep; label: string }> = [
+  { id: "source", label: "Source" },
+  { id: "job", label: "Job" },
+  { id: "review", label: "Review" },
+  { id: "export", label: "Export" },
+];
+
 export function App() {
   const [pool, setPool] = useState<DetailPool>(initialPool);
   const [job, setJob] = useState<JobTarget>(initialJob);
+  const [activeStep, setActiveStep] = useState<WorkspaceStep>("source");
   const [templateId, setTemplateId] = useState(templates[0].id);
   const [masterRepoUrl, setMasterRepoUrl] = useState("https://github.com/PreethiVarshaM/Resume_master_data.git");
   const [masterLoaded, setMasterLoaded] = useState(false);
@@ -226,7 +234,8 @@ export function App() {
       <section className="topBar">
         <div>
           <p className="eyebrow">AI Resume Picker</p>
-          <h1>Build a job-specific resume from your proof pool.</h1>
+          <h1>Tailor an ATS resume from verified evidence.</h1>
+          <p className="heroCopy">Upload or paste candidate material, add the job description, then review only source-backed matches and gaps.</p>
         </div>
         <div className="scoreRing" aria-label={`Relevance score ${draft.score}%`}>
           <span>{draft.score}</span>
@@ -235,126 +244,202 @@ export function App() {
       </section>
 
       <section className="workspace">
-        <aside className="leftPane">
-          <Panel icon={<Database />} title="Master Data Source">
-            <label>
-              Resume master repo
-              <input value={masterRepoUrl} onChange={(event) => setMasterRepoUrl(event.target.value)} />
-            </label>
-            <label>
-              GitHub token for private data
-              <input value={githubToken} onChange={(event) => setGithubToken(event.target.value)} type="password" placeholder="Optional for private repo" />
-            </label>
-            <div className="sourceSummary">
-              <div>
-                <span>Source</span>
-                <strong>{masterLoaded ? "GitHub master data" : "Manual fallback"}</strong>
-              </div>
-              <div>
-                <span>Profile completeness</span>
-                <strong>{profileCompleteness}%</strong>
-              </div>
-            </div>
-            <button onClick={loadMasterData} title="Load resume master data">
-              <RefreshCw size={16} /> Load Master
-            </button>
-          </Panel>
-
-          <Panel icon={<BriefcaseBusiness />} title="Target Job">
-            <div className="fieldGrid two">
-              <label>
-                Company
-                <input value={job.company} onChange={(event) => setJob({ ...job, company: event.target.value })} />
-              </label>
-              <label>
-                Role
-                <input value={job.role} onChange={(event) => setJob({ ...job, role: event.target.value })} />
-              </label>
-            </div>
-            <label>
-              Job URL
-              <input value={job.url} onChange={(event) => setJob({ ...job, url: event.target.value })} />
-            </label>
-            <label>
-              Job Description
-              <textarea rows={7} value={job.description} onChange={(event) => setJob({ ...job, description: event.target.value })} />
-            </label>
-          </Panel>
-
-          <Panel icon={<Sparkles />} title="Candidate Evidence Intake">
-            <div className="fieldGrid two">
-              <label>
-                Name
-                <input value={pool.name} onChange={(event) => setPool({ ...pool, name: event.target.value })} />
-              </label>
-              <label>
-                Title
-                <input value={pool.title} onChange={(event) => setPool({ ...pool, title: event.target.value })} />
-              </label>
-            </div>
-            <label>
-              Summary
-              <textarea rows={4} value={pool.summary} onChange={(event) => setPool({ ...pool, summary: event.target.value })} />
-            </label>
-            <label>
-              Skills
-              <input value={pool.skills.join(", ")} onChange={(event) => setPool({ ...pool, skills: updateList(event.target.value) })} />
-            </label>
-            <label>
-              Upload resume evidence
-              <input type="file" accept=".pdf,.docx,.txt,.md" onChange={(event) => importCandidateFile(event.target.files?.[0])} />
-            </label>
-            <label>
-              Paste resume or profile text
-              <textarea rows={4} value={existingResume} onChange={(event) => setExistingResume(event.target.value)} placeholder="Paste resume, LinkedIn export text, or master profile notes." />
-            </label>
-            <label>
-              Extracted source text
-              <textarea rows={5} value={candidateSourceText} onChange={(event) => setCandidateSourceText(event.target.value)} placeholder="Uploaded file text appears here. You can edit obvious extraction noise before merging." />
-            </label>
-            <button onClick={importExistingResume} title="Merge existing resume">
-              <Upload size={16} /> Merge Evidence
-            </button>
-          </Panel>
-
-          <Panel icon={<Github />} title="GitHub Enrichment">
-            <div className="inlineControls">
-              <input value={githubUser} onChange={(event) => setGithubUser(event.target.value)} placeholder="GitHub username" />
-              <button onClick={importGithub} title="Import GitHub repositories">
-                <RefreshCw size={16} /> Import
+        <aside className="controlPane">
+          <nav className="stepTabs" aria-label="Resume builder steps">
+            {workspaceSteps.map((step) => (
+              <button className={activeStep === step.id ? "active" : ""} key={step.id} onClick={() => setActiveStep(step.id)}>
+                {step.label}
               </button>
-            </div>
-            <div className="projectStack">
-              {pool.projects.map((project) => (
-                <div className="miniCard" key={project.url || project.name}>
-                  <strong>{project.name}</strong>
-                  <span>{project.technologies.join(", ") || "No tech tags yet"}</span>
+            ))}
+          </nav>
+
+          {activeStep === "source" && (
+            <Panel icon={<Sparkles />} title="Candidate Source">
+              <div className="sourceSummary">
+                <div>
+                  <span>Source</span>
+                  <strong>{masterLoaded ? "Master data" : "Manual"}</strong>
                 </div>
-              ))}
-            </div>
-          </Panel>
+                <div>
+                  <span>Completeness</span>
+                  <strong>{profileCompleteness}%</strong>
+                </div>
+              </div>
+              <label>
+                Upload PDF, DOCX, TXT, or MD
+                <input type="file" accept=".pdf,.docx,.txt,.md" onChange={(event) => importCandidateFile(event.target.files?.[0])} />
+              </label>
+              <label>
+                Paste resume or profile text
+                <textarea rows={6} value={existingResume} onChange={(event) => setExistingResume(event.target.value)} placeholder="Paste resume, LinkedIn export text, or profile notes." />
+              </label>
+              {candidateSourceText && (
+                <details>
+                  <summary>Review extracted text</summary>
+                  <textarea rows={7} value={candidateSourceText} onChange={(event) => setCandidateSourceText(event.target.value)} />
+                </details>
+              )}
+              <button onClick={importExistingResume} title="Merge evidence">
+                <Upload size={16} /> Merge Evidence
+              </button>
+              <details>
+                <summary>Use master data repo</summary>
+                <label>
+                  Resume master repo
+                  <input value={masterRepoUrl} onChange={(event) => setMasterRepoUrl(event.target.value)} />
+                </label>
+                <label>
+                  GitHub token for private data
+                  <input value={githubToken} onChange={(event) => setGithubToken(event.target.value)} type="password" placeholder="Optional for private repo" />
+                </label>
+                <button onClick={loadMasterData} title="Load resume master data">
+                  <RefreshCw size={16} /> Load Master
+                </button>
+              </details>
+              <details>
+                <summary>Edit profile basics</summary>
+                <div className="fieldGrid two">
+                  <label>
+                    Name
+                    <input value={pool.name} onChange={(event) => setPool({ ...pool, name: event.target.value })} />
+                  </label>
+                  <label>
+                    Title
+                    <input value={pool.title} onChange={(event) => setPool({ ...pool, title: event.target.value })} />
+                  </label>
+                </div>
+                <label>
+                  Summary
+                  <textarea rows={4} value={pool.summary} onChange={(event) => setPool({ ...pool, summary: event.target.value })} />
+                </label>
+                <label>
+                  Skills
+                  <input value={pool.skills.join(", ")} onChange={(event) => setPool({ ...pool, skills: updateList(event.target.value) })} />
+                </label>
+              </details>
+              <details>
+                <summary>Optional LinkedIn and GitHub enrichment</summary>
+                <label>
+                  LinkedIn URL
+                  <input value={linkedinUrl} onChange={(event) => setLinkedinUrl(event.target.value)} placeholder="https://linkedin.com/in/..." />
+                </label>
+                <label>
+                  LinkedIn profile text
+                  <textarea rows={4} value={linkedinText} onChange={(event) => setLinkedinText(event.target.value)} placeholder="Paste About, Experience, Skills, Certifications..." />
+                </label>
+                <button onClick={importLinkedIn} title="Merge LinkedIn details">
+                  <Plus size={16} /> Merge Profile
+                </button>
+                <div className="inlineControls">
+                  <input value={githubUser} onChange={(event) => setGithubUser(event.target.value)} placeholder="GitHub username" />
+                  <button onClick={importGithub} title="Import GitHub repositories">
+                    <Github size={16} /> Import
+                  </button>
+                </div>
+              </details>
+            </Panel>
+          )}
+
+          {activeStep === "job" && (
+            <Panel icon={<BriefcaseBusiness />} title="Target Job">
+              <div className="fieldGrid two">
+                <label>
+                  Company
+                  <input value={job.company} onChange={(event) => setJob({ ...job, company: event.target.value })} />
+                </label>
+                <label>
+                  Role
+                  <input value={job.role} onChange={(event) => setJob({ ...job, role: event.target.value })} />
+                </label>
+              </div>
+              <label>
+                Job URL
+                <input value={job.url} onChange={(event) => setJob({ ...job, url: event.target.value })} />
+              </label>
+              <label>
+                Job Description
+                <textarea rows={12} value={job.description} onChange={(event) => setJob({ ...job, description: event.target.value })} />
+              </label>
+            </Panel>
+          )}
+
+          {activeStep === "review" && (
+            <Panel icon={<Award />} title="Evidence Review">
+              <div className="analysisCard">
+                <span>JD Match</span>
+                <strong>{analysis.verdict}</strong>
+                <small>Confidence: {analysis.confidence}. Only uploaded, pasted, or loaded evidence is used.</small>
+              </div>
+              <AnalysisList icon={<AlertTriangle size={16} />} title="Mismatches" items={analysis.bluntMismatches} tone="warning" />
+              <details>
+                <summary>Matched evidence</summary>
+                <AnalysisList icon={<CheckCircle2 size={16} />} title="Matched" items={analysis.matchedKeywords.map((keyword) => `Evidence found for "${keyword}".`)} tone="ready" />
+              </details>
+              <details>
+                <summary>ATS checks and fixes</summary>
+                <AnalysisList icon={<FileText size={16} />} title="Fix Before Applying" items={analysis.fixes} tone="plain" />
+                <AnalysisList icon={<CheckCircle2 size={16} />} title="ATS Checks" items={analysis.atsChecks} tone="ready" />
+              </details>
+            </Panel>
+          )}
+
+          {activeStep === "export" && (
+            <Panel icon={<Save />} title="Export Resume">
+              <div className="metric">
+                <span>Template</span>
+                <strong>{selectedTemplate.name}</strong>
+                <small>{selectedTemplate.description}</small>
+              </div>
+              <div className="templateSelect compact">
+                <Star size={16} />
+                <select value={templateId} onChange={(event) => setTemplateId(event.target.value)}>
+                  {templates.map((template) => (
+                    <option value={template.id} key={template.id}>
+                      {template.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="exportGrid">
+                <button onClick={exportTxt} title="Export text">
+                  <FileText size={16} /> TXT
+                </button>
+                <button onClick={exportDocx} title="Export DOCX">
+                  <Download size={16} /> DOCX
+                </button>
+                <button onClick={exportPdf} title="Export PDF">
+                  <Download size={16} /> PDF
+                </button>
+              </div>
+              <details>
+                <summary>Save version to GitHub</summary>
+                <div className="versionName">{draft.versionName}</div>
+                <label>
+                  Repository
+                  <input value={targetRepo} onChange={(event) => setTargetRepo(event.target.value)} placeholder="owner/repo" />
+                </label>
+                <label>
+                  GitHub token
+                  <input value={githubToken} onChange={(event) => setGithubToken(event.target.value)} type="password" placeholder="Fine-grained token" />
+                </label>
+                <button onClick={saveToGithub} title="Save resume version to GitHub">
+                  <Github size={16} /> Save Version
+                </button>
+              </details>
+            </Panel>
+          )}
+
+          <div className="statusLine">{status}</div>
         </aside>
 
         <section className="previewPane">
-          <div className="toolbar">
-            <div className="templateSelect">
-              <Star size={16} />
-              <select value={templateId} onChange={(event) => setTemplateId(event.target.value)}>
-                {templates.map((template) => (
-                  <option value={template.id} key={template.id}>
-                    {template.name}
-                  </option>
-                ))}
-              </select>
+          <div className="previewHeader">
+            <div>
+              <span>ATS Preview</span>
+              <strong>{draft.versionName}</strong>
             </div>
-            <button onClick={exportTxt} title="Export text">
-              <FileText size={16} /> TXT
-            </button>
-            <button onClick={exportDocx} title="Export DOCX">
-              <Download size={16} /> DOCX
-            </button>
-            <button onClick={exportPdf} title="Export PDF">
-              <Download size={16} /> PDF
+            <button onClick={() => setActiveStep("export")}>
+              <Download size={16} /> Export
             </button>
           </div>
 
@@ -393,67 +478,6 @@ export function App() {
           </article>
         </section>
 
-        <aside className="rightPane">
-          <Panel icon={<Award />} title="Relevance Review">
-            <div className="metric">
-              <span>Template</span>
-              <strong>{selectedTemplate.name}</strong>
-              <small>{selectedTemplate.description}</small>
-            </div>
-            <div className="analysisCard">
-              <span>JD Match Analysis</span>
-              <strong>{analysis.verdict}</strong>
-              <small>
-                Confidence: {analysis.confidence}. Compared only against loaded or pasted candidate evidence.
-              </small>
-            </div>
-            <AnalysisList icon={<CheckCircle2 size={16} />} title="Matched Evidence" items={analysis.matchedKeywords.map((keyword) => `Evidence found for "${keyword}".`)} tone="ready" />
-            <AnalysisList icon={<AlertTriangle size={16} />} title="Blunt Mismatches" items={analysis.bluntMismatches} tone="warning" />
-            <AnalysisList icon={<FileText size={16} />} title="Fix Before Applying" items={analysis.fixes} tone="plain" />
-            <AnalysisList icon={<CheckCircle2 size={16} />} title="ATS Checks" items={analysis.atsChecks} tone="ready" />
-            <div className="chips">
-              {draft.missingKeywords.map((keyword) => (
-                <span key={keyword}>{keyword}</span>
-              ))}
-            </div>
-            <ul className="suggestions">
-              {draft.suggestions.map((suggestion) => (
-                <li key={suggestion}>{suggestion}</li>
-              ))}
-            </ul>
-          </Panel>
-
-          <Panel icon={<Link />} title="LinkedIn Import">
-            <label>
-              Public profile URL
-              <input value={linkedinUrl} onChange={(event) => setLinkedinUrl(event.target.value)} placeholder="https://linkedin.com/in/..." />
-            </label>
-            <label>
-              Profile text
-              <textarea rows={5} value={linkedinText} onChange={(event) => setLinkedinText(event.target.value)} placeholder="Paste About, Experience, Skills, Certifications..." />
-            </label>
-            <button onClick={importLinkedIn} title="Merge LinkedIn details">
-              <Plus size={16} /> Merge Profile
-            </button>
-          </Panel>
-
-          <Panel icon={<Save />} title="Version & GitHub Save">
-            <div className="versionName">{draft.versionName}</div>
-            <label>
-              Repository
-              <input value={targetRepo} onChange={(event) => setTargetRepo(event.target.value)} placeholder="owner/repo" />
-            </label>
-            <label>
-              GitHub token
-              <input value={githubToken} onChange={(event) => setGithubToken(event.target.value)} type="password" placeholder="Fine-grained token" />
-            </label>
-            <button onClick={saveToGithub} title="Save resume version to GitHub">
-              <Github size={16} /> Save Version
-            </button>
-          </Panel>
-
-          <div className="statusLine">{status}</div>
-        </aside>
       </section>
     </main>
   );

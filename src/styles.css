@@ -396,6 +396,11 @@ label {
   border: 1px solid #e8d7b6;
 }
 
+.roadmapBlock.plain {
+  background: #f6f7f8;
+  border: 1px solid #dde2e6;
+}
+
 .roadmapTitle {
   display: flex;
   align-items: center;
@@ -405,6 +410,10 @@ label {
 
 .roadmapBlock.next .roadmapTitle {
   color: #7a4f08;
+}
+
+.roadmapBlock.plain .roadmapTitle {
+  color: #354353;
 }
 
 .roadmapBlock ul {

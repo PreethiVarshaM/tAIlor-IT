@@ -8,6 +8,10 @@ Phase 1 MVP is implemented as a Vite + React + TypeScript web app.
 
 Working now:
 
+- User-provided resume evidence intake from PDF, DOCX, TXT, MD, and pasted text.
+- Strict no-hallucination relevance analysis that only uses provided/imported candidate evidence.
+- Blunt mismatch reporting for JD requirements that are not supported by the candidate data.
+- ATS-friendly resume output with standard section headings.
 - Resume master-data loading from `https://github.com/PreethiVarshaM/Resume_master_data.git`.
 - Manual resume-detail fallback when master data is unavailable or incomplete.
 - Live job targeting from company, role, job URL, and pasted job description.
@@ -40,6 +44,8 @@ See [docs/PHASES.md](docs/PHASES.md) for the living phase-by-phase project log.
 - Lucide React icons
 - `docx` for DOCX export
 - `jspdf` for PDF export
+- `mammoth` for DOCX evidence extraction
+- `pdfjs-dist` for PDF evidence extraction
 - GitHub REST API for public repo import and version save
 
 ## Getting Started
@@ -73,6 +79,7 @@ npm audit --audit-level=moderate
 ```text
 src/
   App.tsx           Main interactive resume builder UI
+  fileExtractors.ts PDF, DOCX, TXT, and MD text extraction
   resumeEngine.ts  Resume selection, scoring, imports, and text rendering
   sampleData.ts    Starter profile, job, and template data
   styles.css       Product UI styling
@@ -88,6 +95,8 @@ The app treats `data/professional_master_data.yml` in the configured master-data
 Direct LinkedIn scraping is intentionally not implemented in Phase 1 because LinkedIn often blocks automated scraping and may require authorized access. The current app stores the LinkedIn URL and supports merging pasted or exported profile text. A later backend phase should add a compliant connector or export-upload workflow.
 
 GitHub saving currently writes generated TXT resume content plus metadata. Future phases should generate DOCX/PDF from the chosen visual template and save the complete artifact bundle.
+
+The current evaluator is intentionally strict. It can identify gaps and suggest what to add only if true, but it must not invent tools, credentials, employers, metrics, or project claims that were not present in uploaded, pasted, or master-data evidence.
 
 ## License
 

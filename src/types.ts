@@ -59,3 +59,14 @@ export type Template = {
   name: string;
   description: string;
 };
+
+export type EvidenceAnalysis = {
+  verdict: string;
+  confidence: "High" | "Medium" | "Low";
+  matchedKeywords: string[];
+  missingKeywords: string[];
+  weakClaims: string[];
+  bluntMismatches: string[];
+  fixes: string[];
+  atsChecks: string[];
+};

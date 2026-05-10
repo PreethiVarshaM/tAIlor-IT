@@ -10,6 +10,10 @@ Goal: Build a usable single-page resume tailoring workspace that proves the end-
 
 ### Works Now
 
+- Candidate evidence intake from PDF, DOCX, TXT, MD, and pasted text.
+- Strict local analysis agent that compares the JD to provided evidence only.
+- Blunt mismatch reporting for missing or unsupported JD requirements.
+- ATS-friendly resume generation with standard parser-safe headings.
 - Master-data fetch from `Resume_master_data` using `data/professional_master_data.yml` as source of truth.
 - Manual fallback flow when master data is unavailable or missing required resume fields.
 - Job target inputs for company, role, job URL, and job description.
@@ -28,6 +32,8 @@ Goal: Build a usable single-page resume tailoring workspace that proves the end-
 ### Known Limits
 
 - The relevance engine is keyword-based, not LLM-based.
+- The local analysis agent is deterministic and evidence-bound; full LLM critique belongs in Phase 2 with backend secrets and citations.
+- PDF extraction quality depends on the structure of the uploaded PDF.
 - Master-data import currently expects `data/professional_master_data.yml` on the `main` branch.
 - Private master-data repos require a GitHub token entered in the frontend until backend token storage is added.
 - Existing resume and LinkedIn import extract only simple summary, skill, and certification signals.
@@ -52,6 +58,7 @@ Goal: Replace the keyword-only matcher with an LLM-assisted evidence selector th
 Planned work:
 
 - Add backend API boundary for model calls and secrets.
+- Split analysis into specialized agents for JD parsing, evidence matching, mismatch critique, ATS checks, and resume assembly.
 - Create structured evidence objects for jobs, achievements, projects, skills, education, and certifications.
 - Generate selected resume sections with source references back to the data pool.
 - Add explanation cards for why each bullet or project was selected.

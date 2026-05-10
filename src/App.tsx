@@ -11,6 +11,7 @@ import {
   FileText,
   Github,
   Link,
+  Upload,
   Plus,
   RefreshCw,
   Save,
@@ -19,11 +20,14 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { initialJob, initialPool, templates } from "./sampleData";
+import { extractTextFromFile } from "./fileExtractors";
 import {
+  createEvidenceAnalysis,
   createResumeDraft,
   fetchMasterData,
   fetchGithubRepos,
   mergeGithubRepos,
+  parseResumeTextToPool,
   parseLinkedInProfileText,
   resumeToText,
 } from "./resumeEngine";
@@ -36,6 +40,8 @@ const updateList = (value: string) =>
     .filter(Boolean);
 
 const phaseOneWorking = [
+  "Candidate evidence intake from PDF, DOCX, TXT, MD, and pasted text.",
+  "Strict local analysis agent that reports relevance, gaps, and fixes without adding facts.",
   "Live job targeting from job URL, company, role, and pasted job description.",
   "Reusable person data pool with summary, skills, projects, certifications, and old resume merge.",
   "Public GitHub repository import for recent projects, languages, topics, and repo links.",
@@ -47,7 +53,7 @@ const phaseOneWorking = [
 
 const nextEnhancements = [
   "Backend workspace with secure user auth, encrypted GitHub tokens, and stored profile pools.",
-  "LLM-based evidence picker that explains why each bullet, skill, and project was selected.",
+  "LLM-based multi-agent reviewer with server-side secrets, citations, and structured audit logs.",
   "Authorized LinkedIn import via export upload or approved profile-data connector.",
   "Multiple extendable templates with visual preview, ATS mode, and recruiter mode.",
   "Inline resume editor with accept/reject suggestions, section locking, and revision history.",
@@ -73,11 +79,13 @@ export function App() {
   const [linkedinUrl, setLinkedinUrl] = useState("");
   const [linkedinText, setLinkedinText] = useState("");
   const [existingResume, setExistingResume] = useState("");
+  const [candidateSourceText, setCandidateSourceText] = useState("");
   const [githubToken, setGithubToken] = useState("");
   const [targetRepo, setTargetRepo] = useState("");
   const [status, setStatus] = useState("Ready to tailor the next resume.");
 
   const draft = useMemo(() => createResumeDraft(pool, job), [pool, job]);
+  const analysis = useMemo(() => createEvidenceAnalysis(pool, job), [pool, job]);
   const resumeText = useMemo(() => resumeToText(pool, draft), [pool, draft]);
   const selectedTemplate = templates.find((template) => template.id === templateId)!;
   const profileCompleteness = useMemo(() => {
@@ -139,20 +147,28 @@ export function App() {
   };
 
   const importExistingResume = () => {
-    if (!existingResume.trim()) {
-      setStatus("Paste an existing resume before merging.");
+    const source = [existingResume, candidateSourceText].filter(Boolean).join("\n\n");
+    if (!source.trim()) {
+      setStatus("Paste resume text or upload a PDF, DOCX, TXT, or MD file before merging.");
       return;
     }
-    const parsed = parseLinkedInProfileText(existingResume);
-    setPool((current) => ({
-      ...current,
-      summary: parsed.summary || current.summary,
-      skills: parsed.skills?.length ? Array.from(new Set([...current.skills, ...parsed.skills])) : current.skills,
-      certifications: parsed.certifications?.length
-        ? Array.from(new Set([...current.certifications, ...parsed.certifications]))
-        : current.certifications,
-    }));
-    setStatus("Existing resume text was merged into the reusable data pool.");
+    setPool((current) => parseResumeTextToPool(source, current));
+    setStatus("Candidate evidence was merged. The analysis now uses only the provided source data.");
+  };
+
+  const importCandidateFile = async (file?: File) => {
+    if (!file) {
+      return;
+    }
+    try {
+      setStatus(`Extracting text from ${file.name}...`);
+      const text = await extractTextFromFile(file);
+      setCandidateSourceText((current) => [current, text].filter(Boolean).join("\n\n"));
+      setPool((current) => parseResumeTextToPool(text, current));
+      setStatus(`Imported ${file.name}. Review extracted text, then paste the JD for strict analysis.`);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Could not extract text from that file.");
+    }
   };
 
   const exportTxt = () => {
@@ -295,7 +311,7 @@ export function App() {
             </label>
           </Panel>
 
-          <Panel icon={<Sparkles />} title="Person Data Pool">
+          <Panel icon={<Sparkles />} title="Candidate Evidence Intake">
             <div className="fieldGrid two">
               <label>
                 Name
@@ -315,11 +331,19 @@ export function App() {
               <input value={pool.skills.join(", ")} onChange={(event) => setPool({ ...pool, skills: updateList(event.target.value) })} />
             </label>
             <label>
-              Existing resume text
-              <textarea rows={4} value={existingResume} onChange={(event) => setExistingResume(event.target.value)} placeholder="Paste an old resume to extract reusable summary, skills, and certifications." />
+              Upload resume evidence
+              <input type="file" accept=".pdf,.docx,.txt,.md" onChange={(event) => importCandidateFile(event.target.files?.[0])} />
+            </label>
+            <label>
+              Paste resume or profile text
+              <textarea rows={4} value={existingResume} onChange={(event) => setExistingResume(event.target.value)} placeholder="Paste resume, LinkedIn export text, or master profile notes." />
+            </label>
+            <label>
+              Extracted source text
+              <textarea rows={5} value={candidateSourceText} onChange={(event) => setCandidateSourceText(event.target.value)} placeholder="Uploaded file text appears here. You can edit obvious extraction noise before merging." />
             </label>
             <button onClick={importExistingResume} title="Merge existing resume">
-              <Plus size={16} /> Merge Resume
+              <Upload size={16} /> Merge Evidence
             </button>
           </Panel>
 
@@ -408,11 +432,15 @@ export function App() {
             </div>
             <div className="analysisCard">
               <span>JD Match Analysis</span>
-              <strong>{draft.score >= 75 ? "Strong match" : draft.score >= 45 ? "Partial match" : "Needs more evidence"}</strong>
+              <strong>{analysis.verdict}</strong>
               <small>
-                Compared the target JD with the loaded resume pool, selected projects, skills, and work bullets.
+                Confidence: {analysis.confidence}. Compared only against loaded or pasted candidate evidence.
               </small>
             </div>
+            <RoadmapList icon={<CheckCircle2 size={16} />} title="Matched Evidence" items={analysis.matchedKeywords.map((keyword) => `Evidence found for "${keyword}".`)} tone="ready" />
+            <RoadmapList icon={<Clock3 size={16} />} title="Blunt Mismatches" items={analysis.bluntMismatches} tone="next" />
+            <RoadmapList icon={<FileText size={16} />} title="Fix Before Applying" items={analysis.fixes} tone="plain" />
+            <RoadmapList icon={<CheckCircle2 size={16} />} title="ATS Checks" items={analysis.atsChecks} tone="ready" />
             <div className="chips">
               {draft.missingKeywords.map((keyword) => (
                 <span key={keyword}>{keyword}</span>
@@ -504,7 +532,7 @@ function RoadmapList({
   icon: React.ReactNode;
   title: string;
   items: string[];
-  tone: "ready" | "next";
+  tone: "ready" | "next" | "plain";
 }) {
   return (
     <div className={`roadmapBlock ${tone}`}>

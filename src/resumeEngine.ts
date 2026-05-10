@@ -1,4 +1,4 @@
-import { DetailPool, Experience, JobTarget, Project, ResumeDraft } from "./types";
+import { DetailPool, EvidenceAnalysis, Experience, JobTarget, Project, ResumeDraft } from "./types";
 import yaml from "js-yaml";
 
 const stopWords = new Set([
@@ -50,6 +50,26 @@ const evidenceText = (pool: DetailPool) =>
     ]),
     pool.certifications.join(" "),
   ].join(" ");
+
+const topKeywords = (text: string, limit = 28) => {
+  const counts = new Map<string, number>();
+  tokenize(text).forEach((word) => counts.set(word, (counts.get(word) || 0) + 1));
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([word]) => word)
+    .slice(0, limit);
+};
+
+const relevantLines = (text: string, keywords: string[], limit = 8) =>
+  text
+    .split(/\r?\n|(?<=\.)\s+/)
+    .map((line) => line.trim().replace(/^[-*\u2022]\s*/, ""))
+    .filter((line) => line.length > 28)
+    .map((line) => ({ line, score: overlapScore(line, keywords) }))
+    .filter((item) => item.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit)
+    .map(({ line }) => line);
 
 const overlapScore = (text: string, keywords: string[]) => {
   const words = tokenize(text);
@@ -119,6 +139,91 @@ export function createResumeDraft(pool: DetailPool, job: JobTarget): ResumeDraft
     missingKeywords,
     suggestions,
     versionName,
+  };
+}
+
+export function parseResumeTextToPool(text: string, current: DetailPool): DetailPool {
+  const lines = text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const email = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0] || current.email;
+  const phone = text.match(/(?:\+?\d[\d\s().-]{7,}\d)/)?.[0] || current.phone;
+  const name = lines.find((line) => line.length < 60 && !line.includes("@") && !/\d/.test(line)) || current.name;
+  const skillsLineIndex = lines.findIndex((line) => /^skills\b|technical skills/i.test(line));
+  const skillSource =
+    skillsLineIndex >= 0
+      ? [lines[skillsLineIndex], lines[skillsLineIndex + 1] || ""].join(" ")
+      : topKeywords(text, 18).join(", ");
+  const skills = Array.from(
+    new Set([
+      ...current.skills,
+      ...skillSource
+        .replace(/technical skills|skills/gi, "")
+        .split(/[,|;•]/)
+        .map((item) => item.trim())
+        .filter((item) => item.length > 1 && item.length < 35),
+    ]),
+  ).slice(0, 35);
+  const jobKeywords = topKeywords(text, 24);
+  const bullets = relevantLines(text, jobKeywords, 10);
+
+  return {
+    ...current,
+    name,
+    email,
+    phone,
+    summary: lines.slice(0, 5).join(" ").slice(0, 700) || current.summary,
+    skills,
+    experience: bullets.length
+      ? [
+          {
+            company: "Imported Resume Evidence",
+            role: current.title || "Candidate Experience",
+            period: "Provided source",
+            bullets,
+          },
+          ...current.experience.filter((item) => item.company !== "Imported Resume Evidence"),
+        ]
+      : current.experience,
+  };
+}
+
+export function createEvidenceAnalysis(pool: DetailPool, job: JobTarget): EvidenceAnalysis {
+  const jdKeywords = uniq(topKeywords([job.role, job.description].join(" "), 36));
+  const poolText = evidenceText(pool);
+  const poolKeywords = new Set(tokenize(poolText));
+  const matchedKeywords = jdKeywords.filter((keyword) => poolKeywords.has(keyword)).slice(0, 18);
+  const missingKeywords = jdKeywords.filter((keyword) => !poolKeywords.has(keyword)).slice(0, 18);
+  const score = jdKeywords.length ? Math.round((matchedKeywords.length / jdKeywords.length) * 100) : 0;
+  const weakClaims = relevantLines(poolText, missingKeywords, 4).map(
+    (line) => `Weak or indirect evidence for JD terms: "${line}"`,
+  );
+  const bluntMismatches = missingKeywords.slice(0, 8).map(
+    (keyword) => `No explicit evidence found for "${keyword}" in the provided candidate data.`,
+  );
+  const fixes = [
+    ...missingKeywords.slice(0, 6).map((keyword) => `Add this only if true: a concrete bullet proving ${keyword}.`),
+    "Replace broad claims with source-backed bullets that include action, scope, tool, and measurable result.",
+    "Do not add tools, certifications, or domains unless they appear in the uploaded/pasted data.",
+  ];
+  const atsChecks = [
+    pool.email ? "Contact email present." : "Missing contact email.",
+    pool.phone ? "Phone number present." : "Missing phone number.",
+    pool.skills.length ? "Skills section present." : "Missing skills section.",
+    pool.experience.length ? "Experience evidence present." : "Missing experience evidence.",
+    "Uses standard ATS headings: Summary, Skills, Experience, Projects, Education, Certifications.",
+  ];
+
+  return {
+    verdict: score >= 75 ? "Strong match. Still verify missing terms before applying." : score >= 45 ? "Partial match. Apply only after fixing the gaps below." : "Weak match. The JD asks for evidence not present in the provided data.",
+    confidence: poolText.length > 1200 ? "High" : poolText.length > 500 ? "Medium" : "Low",
+    matchedKeywords,
+    missingKeywords,
+    weakClaims,
+    bluntMismatches,
+    fixes,
+    atsChecks,
   };
 }
 
